@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+*.log
+Launch_GrowthOS.bat
+Launch_GrowthOS.vbs

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowthOS | Personal Growth & Goal Operating System</title>
+    <meta name="description" content="A comprehensive personal growth web app to set target goals with manual timeframes, assign daily tasks, track streaks, and analyze your performance with an instant IndexedDB database.">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js CDN for Deep Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Canvas Confetti for Celebration Micro-animations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-header">
+                <div class="brand-logo">G</div>
+                <div>
+                    <div class="brand-title">GrowthOS</div>
+                    <span class="brand-badge">PRO EDITION</span>
+                </div>
+            </div>
+
+            <!-- User Gamification Level & Streak Mini Card -->
+            <div class="user-level-card">
+                <div style="font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between;">
+                    <span id="sidebar-level">⚡ Level 1</span>
+                    <button class="icon-btn" onclick="document.getElementById('xp-info-modal').classList.add('active')" title="How XP Works" style="font-size: 0.85rem; padding: 0.1rem 0.3rem;">❓</button>
+                </div>
+                <div class="xp-progress-container">
+                    <div class="xp-progress-bar" id="sidebar-xp-bar" style="width: 0%;"></div>
+                </div>
+                <div class="xp-text">
+                    <span id="sidebar-xp-current">0 XP</span>
+                    <span id="sidebar-xp-next">Next: 500 XP</span>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                    🔥 <span id="sidebar-streak">0 Days</span> streak
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="nav-menu">
+                <div class="nav-item active" data-tab="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-tab="goals">
+                    <span class="nav-icon">🎯</span>
+                    <span>Target Goals</span>
+                </div>
+                <div class="nav-item" data-tab="tasks">
+                    <span class="nav-icon">📝</span>
+                    <span>Daily Tasks</span>
+                </div>
+                <div class="nav-item" data-tab="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics Hub</span>
+                </div>
+                <div class="nav-item" data-tab="journal">
+                    <span class="nav-icon">📔</span>
+                    <span>Growth Journal</span>
+                </div>
+                <div class="nav-item" data-tab="focus">
+                    <span class="nav-icon">🎧</span>
+                    <span>Focus Room</span>
+                </div>
+                <div class="nav-item" data-tab="ai_coach">
+                    <span class="nav-icon">🤖</span>
+                    <span>AI Growth Coach</span>
+                </div>
+                <div class="nav-item" data-tab="rewards">
+                    <span class="nav-icon">🏆</span>
+                    <span>Rewards Shop</span>
+                </div>
+                <div class="nav-item" data-tab="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Database & Settings</span>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="quick-seed-btn" id="btn-seed-data">
+                    <span>🌱 Load Demo Data</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- 1. DASHBOARD TAB -->
+            <section id="dashboard-tab" class="tab-view active">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Personal Growth Dashboard</h1>
+                        <p id="dashboard-date-display">Today is the best day to conquer your goals.</p>
+                    </div>
+                    <div class="top-actions">
+                        <button class="btn btn-primary" id="dash-btn-add-task">➕ Quick Task</button>
+                        <button class="btn btn-emerald" id="dash-btn-add-goal">🎯 New Target Goal</button>
+                    </div>
+                </div>
+
+                <!-- Stat Widgets -->
+                <div class="grid-3">
+                    <div class="stat-widget">
+                        <div class="stat-icon cyan">🎯</div>
+                        <div class="stat-content">
+                            <h3 id="dash-stat-goals">0 / 0</h3>
+                            <p>Active Target Goals</p>
+                        </div>
+                    </div>
+                    <div class="stat-widget">
+                        <div class="stat-icon emerald">⚡</div>
+                        <div class="stat-content">
+                            <h3 id="dash-stat-tasks-done">0%</h3>
+                            <p>Today's Daily Velocity</p>
+                        </div>
+                    </div>
+                    <div class="stat-widget">
+                        <div class="stat-icon amber">🔥</div>
+                        <div class="stat-content">
+                            <h3 id="dash-stat-streak">0 Days</h3>
+                            <p>Current Consistency Streak</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GitHub-Style 30-Day Activity Heatmap -->
+                <div class="glass-card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-title">📅 30-Day Consistency Heatmap</div>
+                        <div class="heatmap-legend">
+                            <span>Less</span>
+                            <div class="legend-boxes">
+                                <div class="legend-box" style="background: rgba(255,255,255,0.05);"></div>
+                                <div class="legend-box" style="background: rgba(16,185,129,0.25);"></div>
+                                <div class="legend-box" style="background: rgba(16,185,129,0.5);"></div>
+                                <div class="legend-box" style="background: rgba(16,185,129,0.75);"></div>
+                                <div class="legend-box" style="background: var(--accent-emerald);"></div>
+                            </div>
+                            <span>More</span>
+                        </div>
+                    </div>
+                    <div class="heatmap-container">
+                        <div class="heatmap-grid" id="dash-heatmap-grid">
+                            <!-- Populated dynamically via Javascript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Action Plan Checklist -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Today's Daily Tasks & Habits</div>
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);" id="dash-task-counter">0 remaining</span>
+                    </div>
+                    <div class="tasks-container" id="dash-tasks-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. TARGET GOALS TAB -->
+            <section id="goals-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Target Goals & Periods</h1>
+                        <p>Set specific numerical targets with custom manual periods and track burn-down velocity.</p>
+                    </div>
+                    <div class="top-actions">
+                        <button class="btn btn-emerald" id="goals-btn-add">➕ New Target Goal</button>
+                    </div>
+                </div>
+
+                <!-- Filter & View Controls -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm active" data-goal-filter="all">All Goals</button>
+                        <button class="btn btn-secondary btn-sm" data-goal-filter="Career">💼 Career</button>
+                        <button class="btn btn-secondary btn-sm" data-goal-filter="Health">💪 Health</button>
+                        <button class="btn btn-secondary btn-sm" data-goal-filter="Financial">💰 Financial</button>
+                        <button class="btn btn-secondary btn-sm" data-goal-filter="Personal">🧘 Personal</button>
+                        <button class="btn btn-secondary btn-sm" data-goal-filter="Skills">📚 Skills</button>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary btn-sm" id="btn-toggle-kanban" onclick="GoalsComponent.toggleViewMode()" style="border-color: var(--accent-purple);">📋 Switch to Kanban</button>
+                    </div>
+                </div>
+
+                <div class="goals-grid" id="goals-list-grid">
+                    <!-- Populated dynamically -->
+                </div>
+                
+                <div id="goals-kanban-board" style="display: none; gap: 1.5rem; overflow-x: auto; padding-bottom: 1rem; align-items: flex-start;">
+                    <!-- Kanban Columns -->
+                    <div class="kanban-column" style="flex: 1; min-width: 320px; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
+                        <h3 style="color: var(--accent-cyan); margin-bottom: 1.25rem; font-size: 1.1rem; border-bottom: 1px solid rgba(6, 182, 212, 0.2); padding-bottom: 0.5rem;">📋 In Progress</h3>
+                        <div id="kanban-col-progress" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                    </div>
+                    <div class="kanban-column" style="flex: 1; min-width: 320px; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
+                        <h3 style="color: var(--accent-emerald); margin-bottom: 1.25rem; font-size: 1.1rem; border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 0.5rem;">✅ Completed</h3>
+                        <div id="kanban-col-completed" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                    </div>
+                    <div class="kanban-column" style="flex: 1; min-width: 320px; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
+                        <h3 style="color: var(--accent-purple); margin-bottom: 1.25rem; font-size: 1.1rem; border-bottom: 1px solid rgba(139, 92, 246, 0.2); padding-bottom: 0.5rem;">🏆 Overachieved</h3>
+                        <div id="kanban-col-overachieved" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. DAILY TASKS TAB -->
+            <section id="tasks-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Daily Task Assignment</h1>
+                        <p>Assign daily action steps linked to your target goals and earn XP upon completion.</p>
+                    </div>
+                    <div class="top-actions">
+                        <button class="btn btn-primary" id="tasks-btn-add">➕ Assign New Task</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm active" data-task-filter="today">Today's Tasks</button>
+                        <button class="btn btn-secondary btn-sm" data-task-filter="all">All Assigned</button>
+                        <button class="btn btn-secondary btn-sm" data-task-filter="High">High Priority</button>
+                    </div>
+                    <select id="task-filter-goal" style="padding: 0.4rem 0.85rem; font-size: 0.85rem;">
+                        <option value="">All Linked Goals</option>
+                    </select>
+                </div>
+
+                <div class="glass-card">
+                    <div class="tasks-container" id="all-tasks-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ANALYTICS HUB TAB -->
+            <section id="analytics-tab" class="tab-view" style="position: relative; overflow: hidden;">
+                <!-- Interactive Particle Background -->
+                <canvas id="analytics-particles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;"></canvas>
+                
+                <div style="position: relative; z-index: 1;">
+                    <div class="top-bar">
+                        <div class="page-title-group">
+                            <h1>Deep Analytics & Insights</h1>
+                            <p>Visual intelligence on your growth trajectory, velocity forecast, and consistency metrics.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title">📈 Goal Velocity & Burn-Down Forecast</div>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="velocity-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title">🍩 Effort Allocation by Category</div>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="category-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2" style="margin-top: 2rem;">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title">🕸️ RPG OS Level Stats</div>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="radar-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title">✨ Daily XP Generation Momentum</div>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="scatter-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flow State Analytics -->
+                    <div class="glass-card" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <div class="card-title">⏳ Flow State Distribution (Time of Day)</div>
+                        </div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="flow-state-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <div class="card-title">📊 14-Day Consistency & XP Earned Trend</div>
+                        </div>
+                        <div style="height: 320px; position: relative;">
+                            <canvas id="streak-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. GROWTH JOURNAL TAB -->
+            <section id="journal-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Growth Journal & Reflections</h1>
+                        <p>Document daily gratitude, lessons learned, and bottlenecks to refine your mindset.</p>
+                    </div>
+                    <div class="top-actions">
+                        <button class="btn btn-purple" id="journal-btn-add">✏️ New Reflection Entry</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <input type="text" id="journal-search" placeholder="🔍 Search reflections, keywords, or takeaways..." style="width: 100%;">
+                </div>
+
+                <div id="journal-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- 6. FOCUS ROOM TAB -->
+            <section id="focus-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Deep Focus Room</h1>
+                        <p>Enter flow state with a Pomodoro focus timer and ambient soundscape synthesis.</p>
+                    </div>
+                </div>
+
+                <div class="glass-card focus-room-container">
+                    <h2 style="font-family: var(--font-heading); font-size: 1.5rem; color: var(--text-primary);">Current Session: Deep Focus</h2>
+                    
+                    <div style="display: flex; justify-content: center; gap: 0.75rem; margin: 1rem 0;">
+                        <button class="btn btn-secondary btn-sm timer-preset-btn active" data-minutes="25">⏱️ 25m Pomodoro</button>
+                        <button class="btn btn-secondary btn-sm timer-preset-btn" data-minutes="50">⏱️ 50m Deep Work</button>
+                        <button class="btn btn-secondary btn-sm timer-preset-btn" data-minutes="90">⏱️ 90m Ultradian</button>
+                    </div>
+
+                    <div class="timer-circle" id="focus-timer-circle">
+                        <span class="timer-display" id="focus-timer-display">25:00</span>
+                        <span class="timer-label" id="focus-timer-status">READY</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: center; gap: 1rem; margin: 1rem 0;">
+                        <button class="btn btn-primary" id="btn-focus-start">▶️ Start Focus</button>
+                        <button class="btn btn-secondary" id="btn-focus-pause" style="display: none;">⏸️ Pause</button>
+                        <button class="btn btn-danger" id="btn-focus-reset">⏹️ Reset</button>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; text-align: left;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem;">🎧 Ambient Soundscape Generator:</label>
+                        <div class="soundscape-selector" style="margin-bottom: 1.5rem;">
+                            <button class="sound-btn active" data-sound="mute">🔇 Mute</button>
+                            <button class="sound-btn" data-sound="rain">🌧️ True Rain & Thunder</button>
+                            <button class="sound-btn" data-sound="forest">🌲 Amazon Rainforest</button>
+                            <button class="sound-btn" data-sound="piano">🎹 Focus Piano</button>
+                            <button class="sound-btn" data-sound="vocals">🌊 Ocean Waves</button>
+                        </div>
+
+                        <!-- Multi-track Sliders for Fine-grained mixing -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem;">
+                                    <span>🌧️ True Rain</span>
+                                    <span id="track-val-rain" style="color: var(--accent-cyan);">0%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="0" class="audio-track-slider" data-track="rain">
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem;">
+                                    <span>🌲 Amazon Forest</span>
+                                    <span id="track-val-forest" style="color: var(--accent-emerald);">0%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="0" class="audio-track-slider" data-track="forest">
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem;">
+                                    <span>🎹 Focus Piano</span>
+                                    <span id="track-val-piano" style="color: var(--accent-purple);">0%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="0" class="audio-track-slider" data-track="piano">
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem;">
+                                    <span>🌊 Ocean Waves</span>
+                                    <span id="track-val-vocals" style="color: var(--accent-amber);">0%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="0" class="audio-track-slider" data-track="vocals">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. AI GROWTH COACH TAB -->
+            <section id="ai_coach-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>AI Growth Coach & Strategy Hub</h1>
+                        <p>Real-time bottleneck diagnosis, velocity recommendations, and periodic automated progress check-ins.</p>
+                    </div>
+                    <div class="top-actions">
+                        <span id="ai-provider-badge" class="period-status status-ontrack" style="padding: 0.45rem 0.85rem; font-size: 0.8rem;">🧠 Local Heuristic AI Engine</span>
+                        <button class="btn btn-purple" onclick="AICoachComponent.openSettingsModal()">⚙️ Configure AI API Key</button>
+                    </div>
+                </div>
+
+                <!-- Proactive Periodic Check-In Banner -->
+                <div class="glass-card" style="margin-bottom: 1.5rem; border-color: rgba(139, 92, 246, 0.4); background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.05));">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>⚡ Proactive AI Executive Progress Check-In</span>
+                                <span class="badge-pill" style="color: var(--accent-cyan); border-color: var(--accent-cyan);">Automated / On-Demand</span>
+                            </div>
+                            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                                Periodically send your active goals, daily habit velocity, streak data, and recent journal logs to your configured AI API (`Gemini` / `OpenAI`) for live strategic advice.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <button class="btn btn-purple" onclick="AICoachComponent.runProactiveCheckIn()">
+                                <span>⚡ Run Live AI Check-In Now</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Proactive Check-In Report Box -->
+                    <div id="proactive-checkin-result" style="margin-top: 1.25rem; padding: 1.25rem; background: rgba(0,0,0,0.35); border: 1px solid var(--glass-border); border-radius: var(--radius-md); display: none;"></div>
+                </div>
+
+                <!-- AI Diagnosis Cards (Local Engine) -->
+                <div id="ai-diagnosis-container">
+                    <!-- Populated by ai_coach.js -->
+                </div>
+
+                <!-- Interactive AI Strategy Query Box -->
+                <div class="glass-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="card-title">💬 Ask Your AI Growth Coach Anything</div>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+                        <input type="text" id="ai-chat-prompt" placeholder="e.g. How can I speed up my Career goal velocity before the deadline next month?" style="flex: 1; padding: 0.7rem 1rem; border-radius: var(--radius-md); background: var(--bg-secondary); border: 1px solid var(--glass-border); color: #fff;">
+                        <button class="btn btn-primary" onclick="AICoachComponent.askCoach(document.getElementById('ai-chat-prompt').value)">
+                            <span>⚡ Ask Coach</span>
+                        </button>
+                    </div>
+                    <div id="ai-chat-response" style="margin-top: 1.25rem; padding: 1.25rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: var(--radius-md); display: none;"></div>
+                </div>
+            </section>
+
+            <!-- 8. REWARDS SHOP TAB -->
+            <section id="rewards-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Personal Rewards Shop</h1>
+                        <p>Spend your hard-earned XP on real-life rewards to build positive reinforcement loops.</p>
+                    </div>
+                    <div class="top-actions">
+                        <div style="background: rgba(139, 92, 246, 0.15); border: 1px solid var(--accent-purple); padding: 0.45rem 1rem; border-radius: var(--radius-md); font-weight: 700; color: #fff;">
+                            Balance: <span id="shop-xp-balance" style="color: var(--accent-cyan);">0 XP</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="RewardsComponent.openRewardModal()">➕ Create Reward</button>
+                    </div>
+                </div>
+
+                <div class="goals-grid" id="rewards-list-grid">
+                    <!-- Populated by rewards.js -->
+                </div>
+
+                <div class="glass-card" style="margin-top: 2rem;">
+                    <div class="card-header">
+                        <div class="card-title">📜 Recent Redemption History Log</div>
+                    </div>
+                    <div id="redemptions-history-list">
+                        <!-- Populated by rewards.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. DATABASE & SETTINGS TAB -->
+            <section id="settings-tab" class="tab-view">
+                <div class="top-bar">
+                    <div class="page-title-group">
+                        <h1>Database & Application Settings</h1>
+                        <p>Full control over your local IndexedDB storage, instant backup export/import, and AI API keys.</p>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div class="card-title">💾 Data Backup & Restore</div>
+                        </div>
+                        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Your data is securely stored inside your browser's native **IndexedDB**. You can export a complete JSON backup at any time to transfer between devices or restore if you clear browser data.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <button class="btn btn-primary" id="btn-export-json">📥 Export Complete Backup (JSON)</button>
+                            <label class="btn btn-secondary" style="cursor: pointer; text-align: center;">
+                                📤 Import Backup File (JSON)
+                                <input type="file" id="btn-import-json" accept=".json" style="display: none;">
+                            </label>
+                            <button class="btn btn-secondary" id="btn-export-csv">📊 Export Tasks & Goals (CSV)</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div class="card-title">🤖 AI Coach & Periodic Check-In Configuration</div>
+                        </div>
+                        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Configure your AI API Key (Gemini or OpenAI) to enable live periodic check-ins, goal trajectory analysis, and executive coaching responses.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <button class="btn btn-purple" onclick="AICoachComponent.openSettingsModal()">⚙️ Configure AI API Key & Periodic Sync</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="card-title">🌱 Demo Data & Database Reset</div>
+                    </div>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Need to test all features or start fresh? You can populate rich sample target goals, daily tasks, custom rewards, and multi-week consistency logs instantly.
+                    </p>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn btn-emerald" id="btn-settings-seed">🌱 Seed Rich Demo Data (Goals, Tasks & Charts)</button>
+                        <button class="btn btn-danger" id="btn-reset-db">🚨 Clear All Data & Reset Database</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- 1. Target Goal Modal -->
+    <div class="modal-overlay" id="goal-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="goal-modal-title">🎯 Create Target Goal</h3>
+                <button class="icon-btn modal-close">✕</button>
+            </div>
+            <form id="goal-form">
+                <input type="hidden" id="goal-id">
+                <div class="form-group">
+                    <label for="goal-title-input">Goal Title / Target Name *</label>
+                    <input type="text" id="goal-title-input" placeholder="e.g. Master Full-Stack Development or Run Marathon" required>
+                </div>
+                <div class="form-group">
+                    <label for="goal-desc-input">Description & Why *</label>
+                    <textarea id="goal-desc-input" rows="2" placeholder="Describe the outcome and personal growth significance..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="goal-category-input">Category *</label>
+                        <select id="goal-category-input" required>
+                            <option value="Career">💼 Career</option>
+                            <option value="Health">💪 Health</option>
+                            <option value="Financial">💰 Financial</option>
+                            <option value="Personal">🧘 Personal</option>
+                            <option value="Skills">📚 Skills</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="goal-target-val">Target Value & Unit *</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="number" id="goal-target-val" placeholder="100" style="width: 60%;" required>
+                            <input type="text" id="goal-unit-input" placeholder="Hours/$ /%" style="width: 40%;" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Manual Period / Timeframe Settings -->
+                <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+                    <label style="color: var(--accent-cyan); display: block; margin-bottom: 0.5rem;">📅 Target Period / Deadline Tuning (Fix Manually)</label>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="goal-start-date">Start Date</label>
+                            <input type="date" id="goal-start-date" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="goal-end-date">End Date / Deadline</label>
+                            <input type="date" id="goal-end-date" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="goal-manual-progress-check">
+                        <input type="checkbox" id="goal-manual-progress-check" style="width: auto; margin-right: 0.5rem;">
+                        Allow Manual Progress Slider Override (Instead of auto-computing solely from tasks)
+                    </label>
+                </div>
+
+                <div class="form-group" id="manual-slider-container" style="display: none;">
+                    <label for="goal-current-val">Current Progress Value (<span id="goal-current-display">0</span>)</label>
+                    <input type="range" id="goal-current-val" min="0" max="100" value="0" class="goal-manual-slider">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-emerald">Save Target Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Daily Task Modal -->
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="task-modal-title">📝 Assign Daily Task / Habit</h3>
+                <button class="icon-btn modal-close">✕</button>
+            </div>
+            <form id="task-form">
+                <input type="hidden" id="task-id">
+                <div class="form-group">
+                    <label for="task-title-input">Task / Action Title *</label>
+                    <input type="text" id="task-title-input" placeholder="e.g. Complete 2 LeetCode problems or 30 min cardio" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-goal-link">Link to Target Goal</label>
+                        <select id="task-goal-link">
+                            <option value="">-- No Linked Goal (Standalone) --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority-input">Priority Level</label>
+                        <select id="task-priority-input">
+                            <option value="High">🔴 High Priority (50 XP)</option>
+                            <option value="Medium" selected>🟡 Medium Priority (30 XP)</option>
+                            <option value="Low">🔵 Low Priority (15 XP)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-freq-input">Frequency / Recurrence *</label>
+                        <select id="task-freq-input">
+                            <option value="Daily">Everday (Daily Habit)</option>
+                            <option value="Weekdays">Mon - Fri (Weekdays)</option>
+                            <option value="Weekends">Sat - Sun (Weekends)</option>
+                            <option value="Custom">Custom Days</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-due-date">Target Time / Due Date</label>
+                        <input type="date" id="task-due-date">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Daily Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Reflection Journal Modal -->
+    <div class="modal-overlay" id="journal-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">📔 Growth Reflection Log</h3>
+                <button class="icon-btn modal-close">✕</button>
+            </div>
+            <form id="journal-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="journal-date-input">Reflection Date *</label>
+                        <input type="date" id="journal-date-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="journal-mood-input">Daily Mindset & Mood *</label>
+                        <select id="journal-mood-input" required>
+                            <option value="🔥 Laser Focused">🔥 Laser Focused & High Energy</option>
+                            <option value="😊 Productive">😊 Productive & Grateful</option>
+                            <option value="🤔 Thoughtful">🤔 Thoughtful / Analyzing</option>
+                            <option value="😪 Tired">😪 Overwhelmed / Needs Rest</option>
+                            <option value="🚀 Unstoppable">🚀 Unstoppable Momentum</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="journal-gratitude-input">What are 3 things you are grateful for or proud of today? *</label>
+                    <textarea id="journal-gratitude-input" rows="2" placeholder="1. Consistent 7-day streak... 2. Completed tricky feature..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="journal-reflection-input">Key Takeaways & Bottlenecks (How can tomorrow be 1% better?) *</label>
+                    <textarea id="journal-reflection-input" rows="3" placeholder="Reflect on personal growth breakthroughs or obstacles..." required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-purple">Save Reflection Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Reward Create / Edit Modal -->
+    <div class="modal-overlay" id="reward-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🏆 Create Personal Reward</h3>
+                <button class="icon-btn modal-close">✕</button>
+            </div>
+            <form id="reward-form">
+                <input type="hidden" id="reward-id">
+                <div class="form-group">
+                    <label for="reward-title-input">Reward Title *</label>
+                    <input type="text" id="reward-title-input" required placeholder="e.g. Guilt-Free Movie & Pizza Night">
+                </div>
+                <div class="form-group">
+                    <label for="reward-desc-input">Description</label>
+                    <textarea id="reward-desc-input" rows="2" placeholder="An afternoon off to enjoy movies with 0 guilt after completing targets."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reward-cost-input">XP Cost *</label>
+                        <input type="number" id="reward-cost-input" required value="200" min="10" step="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="reward-icon-input">Icon (Emoji)</label>
+                        <input type="text" id="reward-icon-input" value="🎬" placeholder="🎬, 🍔, 🎮, 📚">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Reward</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. AI Coach Settings Modal -->
+    <div class="modal-overlay" id="ai-settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🤖 AI Coach & Periodic Check-In Configuration</h3>
+                <button class="icon-btn modal-close">✕</button>
+            </div>
+            <form id="ai-settings-form" onsubmit="AICoachComponent.saveSettings(event)">
+                <div class="form-group">
+                    <label for="ai-provider-input">AI Provider</label>
+                    <select id="ai-provider-input">
+                        <option value="gemini">Google Gemini (gemini-1.5-flash / Pro)</option>
+                        <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                        <option value="groq">Groq (Llama 3 8B)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ai-api-key-input">API Key *</label>
+                    <input type="password" id="ai-api-key-input" placeholder="AIzaSy... or sk-...">
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.4rem;">
+                        Your API key is saved strictly in your local `IndexedDB` on this computer. It enables live periodic progress evaluations and AI coaching advice.
+                    </p>
+                </div>
+                <div class="form-group" style="margin-top: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                        <input type="checkbox" id="ai-periodic-sync-check" checked style="width: auto;">
+                        <span>Enable Proactive Periodic AI Check-Ins & Alert Recommendations</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-purple">Save AI Configuration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- 20-20-20 Eye Strain Overlay Modal -->
+    <div id="eye-strain-overlay" class="modal-overlay" style="z-index: 9999; backdrop-filter: blur(12px);">
+        <div class="modal-content" style="text-align: center; max-width: 450px; background: rgba(10, 10, 15, 0.95); border-color: var(--accent-purple);">
+            <div style="font-size: 4rem; margin-bottom: 0.5rem; animation: float 3s ease-in-out infinite;">👁️</div>
+            <h2 style="color: var(--accent-purple); font-size: 2rem;">20-20-20 Rule</h2>
+            <p style="color: var(--text-secondary); margin: 1rem 0 1.5rem; font-size: 1.05rem;">
+                Look at an object at least <strong>20 feet away</strong> for <strong>20 seconds</strong> to prevent digital eye strain and restore ocular focus.
+            </p>
+            <div style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--accent-purple); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 3rem; font-weight: 800; color: #fff;">
+                <span id="eye-strain-countdown">20</span>
+            </div>
+            <button class="btn btn-secondary" onclick="document.getElementById('eye-strain-overlay').classList.remove('active')">Skip This Cycle</button>
+        </div>
+    </div>
+
+    <!-- XP System Explanation Modal -->
+    <div id="xp-info-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>🎮 How the XP System Works</h2>
+                <button class="icon-btn" onclick="document.getElementById('xp-info-modal').classList.remove('active')">❌</button>
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">
+                <p>GrowthOS uses behavioral psychology to build permanent habits via positive reinforcement.</p>
+                <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 1rem 0;">
+                <h3 style="color: var(--accent-emerald); font-size: 1rem; margin-bottom: 0.5rem;">How to earn XP:</h3>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>Daily Tasks:</strong> Low priority (+15 XP), Medium (+30 XP), High (+50 XP).</li>
+                    <li><strong>Deep Focus:</strong> Finish a 25-minute sprint (+50 XP). Finish a 50+ min sprint (+100 XP).</li>
+                    <li><strong>Overachieving:</strong> Pushing a target goal past 100% unlocks secret status tiers.</li>
+                </ul>
+                <h3 style="color: var(--accent-cyan); font-size: 1rem; margin-bottom: 0.5rem;">Leveling Formula:</h3>
+                <p style="margin-bottom: 1rem;">Levels curve exponentially. The formula is: <code>Level = floor(sqrt(XP / 50)) + 1</code>. This means early levels are fast, but elite levels require compounding consistency.</p>
+                <h3 style="color: var(--accent-purple); font-size: 1rem; margin-bottom: 0.5rem;">The Penalty:</h3>
+                <p>If you uncheck a completed habit, you instantly lose the XP. If your total tasks completed drops to zero for the day, your daily streak is mathematically revoked!</p>
+            </div>
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button class="btn btn-primary" onclick="document.getElementById('xp-info-modal').classList.remove('active')">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Javascript Modules -->
+    <script src="js/db.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/dashboard.js"></script>
+    <script src="js/components/goals.js"></script>
+    <script src="js/components/tasks.js"></script>
+    <script src="js/components/analytics.js"></script>
+    <script src="js/components/journal.js"></script>
+    <script src="js/components/focus.js"></script>
+    <script src="js/components/ai_coach.js"></script>
+    <script src="js/components/rewards.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
