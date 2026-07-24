@@ -13,6 +13,19 @@
 
 ---
 
+> **The Ultimate Gamified Productivity & Personal Growth Engine**
+
+### 📸 Showcase
+<div align="center">
+  <img src="assets/dashboard.png" alt="GrowthOS Dashboard" width="48%">
+  <img src="assets/goals.png" alt="Hierarchical Goals" width="48%">
+  <br>
+  <img src="assets/analytics.png" alt="Deep Analytics" width="48%">
+  <img src="assets/focus.png" alt="Focus Room" width="48%">
+</div>
+
+---
+
 GrowthOS is a gamified, all-in-one productivity and personal growth dashboard designed to help you stay focused, build habits, and level up your life like an RPG. Built with a modern tech stack and designed for a seamless, distraction-free experience, GrowthOS combines hierarchical task management, AI coaching, journaling, and ambient focus rooms into one beautiful, glassmorphic interface.
 
 ## ✨ Core Features
