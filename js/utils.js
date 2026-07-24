@@ -5,6 +5,69 @@
 
 const GrowthUtils = {
     /**
+     * Custom Confirm Modal
+     */
+    confirm(message, title = 'Confirm Action', icon = '⚠️') {
+        return new Promise(resolve => {
+            const modal = document.getElementById('custom-alert-modal');
+            if (!modal) return resolve(window.confirm(message));
+
+            document.getElementById('custom-alert-title').textContent = title;
+            document.getElementById('custom-alert-message').textContent = message;
+            document.getElementById('custom-alert-icon').textContent = icon;
+            
+            const btnCancel = document.getElementById('custom-alert-cancel');
+            const btnConfirm = document.getElementById('custom-alert-confirm');
+            
+            btnCancel.style.display = 'block';
+            
+            const cleanup = () => {
+                modal.classList.remove('active');
+                btnCancel.removeEventListener('click', onCancel);
+                btnConfirm.removeEventListener('click', onConfirm);
+            };
+            
+            const onCancel = () => { cleanup(); resolve(false); };
+            const onConfirm = () => { cleanup(); resolve(true); };
+            
+            btnCancel.addEventListener('click', onCancel);
+            btnConfirm.addEventListener('click', onConfirm);
+            
+            modal.classList.add('active');
+        });
+    },
+
+    /**
+     * Custom Alert Modal
+     */
+    alert(message, title = 'Alert', icon = 'ℹ️') {
+        return new Promise(resolve => {
+            const modal = document.getElementById('custom-alert-modal');
+            if (!modal) return resolve(window.alert(message));
+
+            document.getElementById('custom-alert-title').textContent = title;
+            document.getElementById('custom-alert-message').textContent = message;
+            document.getElementById('custom-alert-icon').textContent = icon;
+            
+            const btnCancel = document.getElementById('custom-alert-cancel');
+            const btnConfirm = document.getElementById('custom-alert-confirm');
+            
+            btnCancel.style.display = 'none'; // Hide cancel for alerts
+            
+            const cleanup = () => {
+                modal.classList.remove('active');
+                btnConfirm.removeEventListener('click', onConfirm);
+            };
+            
+            const onConfirm = () => { cleanup(); resolve(); };
+            
+            btnConfirm.addEventListener('click', onConfirm);
+            
+            modal.classList.add('active');
+        });
+    },
+
+    /**
      * Show animated toast notification
      */
     showToast(message, type = 'cyan') {

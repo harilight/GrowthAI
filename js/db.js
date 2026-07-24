@@ -7,7 +7,7 @@
 class GrowthDatabase {
     constructor() {
         this.dbName = 'GrowthOS_DB';
-        this.version = 2; // Upgraded to v2 for Rewards & Redemptions
+        this.version = 3; // Upgraded to v3 for Hierarchical Goals/Tasks
         this.db = null;
     }
 
@@ -34,6 +34,12 @@ class GrowthDatabase {
                     const goalsStore = db.createObjectStore('goals', { keyPath: 'id' });
                     goalsStore.createIndex('category', 'category', { unique: false });
                     goalsStore.createIndex('status', 'status', { unique: false });
+                    goalsStore.createIndex('parentGoalId', 'parentGoalId', { unique: false });
+                } else {
+                    const goalsStore = event.target.transaction.objectStore('goals');
+                    if (!goalsStore.indexNames.contains('parentGoalId')) {
+                        goalsStore.createIndex('parentGoalId', 'parentGoalId', { unique: false });
+                    }
                 }
 
                 // 2. Tasks Store
@@ -41,6 +47,12 @@ class GrowthDatabase {
                     const tasksStore = db.createObjectStore('tasks', { keyPath: 'id' });
                     tasksStore.createIndex('goalId', 'goalId', { unique: false });
                     tasksStore.createIndex('priority', 'priority', { unique: false });
+                    tasksStore.createIndex('parentTaskId', 'parentTaskId', { unique: false });
+                } else {
+                    const tasksStore = event.target.transaction.objectStore('tasks');
+                    if (!tasksStore.indexNames.contains('parentTaskId')) {
+                        tasksStore.createIndex('parentTaskId', 'parentTaskId', { unique: false });
+                    }
                 }
 
                 // 3. Journal Store
@@ -97,6 +109,12 @@ class GrowthDatabase {
         return this._performTx('goals', 'readonly', (store) => store.get(id));
     }
 
+    async getChildGoals(parentGoalId) {
+        return this._performTx('goals', 'readonly', (store) => 
+            store.index('parentGoalId').getAll(parentGoalId || null)
+        );
+    }
+
     async saveGoal(goal) {
         if (!goal.id) goal.id = 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         goal.updatedAt = new Date().toISOString();
@@ -106,19 +124,57 @@ class GrowthDatabase {
     }
 
     async deleteGoal(id) {
+        // 1. Unlink tasks that reference this goal
         const tasks = await this.getAllTasks();
         for (let task of tasks) {
+            let taskModified = false;
             if (task.goalId === id) {
                 task.goalId = '';
+                taskModified = true;
+            }
+            if (task.effects && Array.isArray(task.effects)) {
+                const initialLength = task.effects.length;
+                task.effects = task.effects.filter(e => e.targetId !== id);
+                if (task.effects.length !== initialLength) taskModified = true;
+            }
+            if (taskModified) {
                 await this.saveTask(task);
             }
         }
-        return this._performTx('goals', 'readwrite', (store) => store.delete(id));
+
+        // 2. Find all descendants recursively
+        const allGoals = await this.getAllGoals();
+        const getDescendants = (goalId) => {
+            let descendants = [];
+            const children = allGoals.filter(g => g.parentGoalId === goalId);
+            children.forEach(child => {
+                descendants.push(child.id);
+                descendants = descendants.concat(getDescendants(child.id));
+            });
+            return descendants;
+        };
+        const idsToDelete = [id, ...getDescendants(id)];
+
+        // 3. Delete all descendants and the goal itself
+        return new Promise((resolve, reject) => {
+            const tx = this.db.transaction('goals', 'readwrite');
+            const store = tx.objectStore('goals');
+            idsToDelete.forEach(deleteId => store.delete(deleteId));
+            
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+        });
     }
 
     // --- TASKS CRUD ---
     async getAllTasks() {
         return this._performTx('tasks', 'readonly', (store) => store.getAll());
+    }
+
+    async getChildTasks(parentTaskId) {
+        return this._performTx('tasks', 'readonly', (store) => 
+            store.index('parentTaskId').getAll(parentTaskId || null)
+        );
     }
 
     async saveTask(task) {
@@ -131,7 +187,27 @@ class GrowthDatabase {
     }
 
     async deleteTask(id) {
-        return this._performTx('tasks', 'readwrite', (store) => store.delete(id));
+        const allTasks = await this.getAllTasks();
+        
+        const getDescendants = (parentId) => {
+            let descendants = [];
+            const children = allTasks.filter(t => t.parentTaskId === parentId);
+            children.forEach(child => {
+                descendants.push(child.id);
+                descendants = descendants.concat(getDescendants(child.id));
+            });
+            return descendants;
+        };
+        const idsToDelete = [id, ...getDescendants(id)];
+
+        return new Promise((resolve, reject) => {
+            const tx = this.db.transaction('tasks', 'readwrite');
+            const store = tx.objectStore('tasks');
+            idsToDelete.forEach(deleteId => store.delete(deleteId));
+            
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+        });
     }
 
     async toggleTaskCompletion(taskId, dateStr) {

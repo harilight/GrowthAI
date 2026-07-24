@@ -58,7 +58,7 @@ const JournalComponent = {
             const btnDelete = card.querySelector('.btn-delete-journal');
             if (btnDelete) {
                 btnDelete.addEventListener('click', async () => {
-                    if (confirm(`Delete reflection from ${entry.date}?`)) {
+                    if (await GrowthUtils.confirm(`Delete reflection from ${entry.date}?`, 'Delete Entry', '🗑️')) {
                         await db.deleteJournalEntry(entry.id);
                         GrowthUtils.showToast('Reflection entry deleted.', 'rose');
                         await this.render(document.getElementById('journal-search')?.value || '');

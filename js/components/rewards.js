@@ -73,7 +73,7 @@ const RewardsComponent = {
                 const btnDelete = card.querySelector('.btn-delete-reward');
                 if (btnDelete) {
                     btnDelete.addEventListener('click', async () => {
-                        if (confirm(`Delete reward "${reward.title}"?`)) {
+                        if (await GrowthUtils.confirm(`Delete reward "${reward.title}"?`, 'Delete Reward', '🗑️')) {
                             await db.deleteReward(reward.id);
                             GrowthUtils.showToast('Reward deleted.', 'rose');
                             await this.render();
@@ -132,7 +132,7 @@ const RewardsComponent = {
 
             await this.render();
         } catch (err) {
-            alert(err.message);
+            await GrowthUtils.alert(err.message, 'Error', '❌');
         }
     },
 

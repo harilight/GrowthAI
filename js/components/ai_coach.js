@@ -45,7 +45,9 @@ const AICoachComponent = {
             // Bullet points (- item or * item at start of line)
             .replace(/^[•\-\*]\s+(.*)$/gm, '<div style="display: flex; gap: 0.5rem; margin: 0.35rem 0;"><span style="color: var(--accent-cyan);">•</span><span>$1</span></div>')
             // Numbered lists (1. item at start of line)
-            .replace(/^(\d+)\.\s+(.*)$/gm, '<div style="display: flex; gap: 0.5rem; margin: 0.4rem 0;"><span style="color: var(--accent-purple); font-weight: 700; min-width: 1.2rem;">$1.</span><span>$2</span></div>');
+            .replace(/^(\d+)\.\s+(.*)$/gm, '<div style="display: flex; gap: 0.5rem; margin: 0.4rem 0;"><span style="color: var(--accent-purple); font-weight: 700; min-width: 1.2rem;">$1.</span><span>$2</span></div>')
+            // Actionable Suggestion Button
+            .replace(/\[SUGGEST_TASK:\s*(.+?)\]/g, `<button class="btn btn-emerald btn-sm" onclick="TasksComponent.openTaskModal({title: '$1', priority: 'High'})" style="margin: 0.5rem 0; font-weight: 600;">➕ Add Task: $1</button>`);
     },
 
     runLocalAnalysis(goals, tasks, journal, settings) {
@@ -136,7 +138,7 @@ const AICoachComponent = {
             <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.25); border-radius: var(--radius-md); padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <div style="font-weight: 700; font-size: 0.95rem; color: var(--accent-emerald);">🎯 Today's Execution Checklist</div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">You have completed **${diagnosis.completedToday}** out of **${diagnosis.totalActiveTasks}** daily habits today.</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">${this.formatMarkdown(`You have completed **${diagnosis.completedToday}** out of **${diagnosis.totalActiveTasks}** daily habits today.`)}</div>
                 </div>
                 <button class="btn btn-emerald btn-sm" onclick="document.querySelector('[data-tab=dashboard]').click()">✓ Go to Today's Tasks</button>
             </div>
@@ -228,7 +230,8 @@ const AICoachComponent = {
                    `**3-Step Execution Plan for "${matchedGoal.title}"**:\n` +
                    `1. **Daily Target Anchor**: Commit to completing exactly **${m.requiredDailyVelocity} ${matchedGoal.unit || 'units'}** every single day without exception.\n` +
                    `2. **Deep Work Flow**: Schedule a dedicated 50-minute Pomodoro block in the **Focus Room** specifically for this goal during your peak morning focus hours.\n` +
-                   `3. **Habit Coupling**: Make sure your ${linkedCount} linked task(s) are set to High Priority so you earn **+50 XP** for every completion!`;
+                   `3. **Habit Coupling**: Make sure your ${linkedCount} linked task(s) are set to High Priority so you earn **+50 XP** for every completion!\n\n` +
+                   `[SUGGEST_TASK: Complete 50-minute Deep Work sprint for ${matchedGoal.title}]`;
         }
 
         // 3. Handle Status / Check-in / How am I doing queries
@@ -269,7 +272,8 @@ const AICoachComponent = {
                 return `To recover "**${behind.title}**" before your deadline (${behind.endDate}):\n` +
                        `1. **Boost Daily Velocity**: Increase your execution to **${m.requiredDailyVelocity} ${behind.unit || 'units'}/day** immediately.\n` +
                        `2. **Link High-Priority Habits**: Create 2 recurring High-Priority tasks specifically linked to this target goal.\n` +
-                       `3. **Morning Sprint**: Schedule a 50-minute Deep Work sprint first thing every morning until progress reaches **${m.timeProgressPercent}%**.`;
+                       `3. **Morning Sprint**: Schedule a 50-minute Deep Work sprint first thing every morning until progress reaches **${m.timeProgressPercent}%**.\n\n` +
+                       `[SUGGEST_TASK: Sprint: Complete ${m.requiredDailyVelocity} ${behind.unit || 'units'} of ${behind.title}]`;
             }
             return `To accelerate your target velocity across active goals:\n` +
                    `1. **Eliminate Standalone Clutter**: Remove low-priority unlinked tasks that drain your morning mental energy.\n` +
@@ -301,10 +305,11 @@ const AICoachComponent = {
         const activeGoalsCount = goals.length;
         const activeTasksCount = tasks.length;
         return `Analyzing your GrowthOS instance (**${activeGoalsCount} Target Goal(s)**, **${activeTasksCount} Daily Habit(s)**, **Level ${settings.level || 1}**)...\n\n` +
-               `**Strategic Action Blueprint for "${prompt}"**:\n` +
+                `**Strategic Action Blueprint for "${prompt}"**:\n` +
                `1. **Numerical Clarity**: Ensure every target goal has exact numerical target values ($ / hours / reps) and a firm deadline.\n` +
                `2. **Task Alignment**: Make sure every daily task is directly linked (` + "`🎯 Linked Goal`" + `) rather than standalone busywork.\n` +
-               `3. **Daily Reflection**: Use the **Growth Journal** to spot exact bottlenecks every evening before rest.`;
+               `3. **Daily Reflection**: Use the **Growth Journal** to spot exact bottlenecks every evening before rest.\n\n` +
+               `[SUGGEST_TASK: Complete a 5-minute Growth Journal entry]`;
     },
 
     async callLLM(prompt, apiKey, provider, goals, tasks, rawMode = false) {
@@ -325,7 +330,7 @@ const AICoachComponent = {
                 journalContext = '\\nRecent Mindset: ' + recentJournal.map(j => `[${j.date}] Mood: ${j.mood} - ${j.reflection.substring(0, 100)}...`).join('; ');
             }
 
-            finalPrompt = `You are an elite personal growth executive coach. You are analyzing the user's GrowthOS dashboard:\n${summary}${journalContext}\n\nUser Question: "${prompt}"\nProvide a punchy, hyper-actionable, structured 3-step strategy formatted cleanly in Markdown with bold key terms and actionable bullet points. Keep it under 250 words.`;
+            finalPrompt = `You are an elite personal growth executive coach. You are analyzing the user's GrowthOS dashboard:\n${summary}${journalContext}\n\nUser Question: "${prompt}"\nProvide a punchy, hyper-actionable, structured 3-step strategy formatted cleanly in Markdown with bold key terms and actionable bullet points. Keep it under 250 words.\nIMPORTANT: You can suggest concrete daily action tasks by formatting them EXACTLY like this on their own line: [SUGGEST_TASK: Task Name]. For example: [SUGGEST_TASK: Code for 1 hour]. This will magically render as a clickable button for the user to add it directly to their schedule.`;
         }
 
         if (provider === 'openai') {
@@ -529,10 +534,13 @@ Example: ["Read 5 pages of documentation", "Write 20 lines of code", "Review pul
             const resultText = await this.callLLM(prompt, apiKey, provider, [], [], true);
             
             let habits = [];
-            const match = resultText.match(/\[[\s\S]*\]/);
+            let cleanJson = resultText;
+            if (cleanJson.includes('\`\`\`')) {
+                cleanJson = cleanJson.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+            }
+            const match = cleanJson.match(/\[[\s\S]*\]/);
             if (match) {
-                const cleanJson = match[0].trim();
-                habits = JSON.parse(cleanJson);
+                habits = JSON.parse(match[0]);
             } else {
                 throw new Error("No JSON array found in response");
             }
@@ -559,7 +567,8 @@ Example: ["Read 5 pages of documentation", "Write 20 lines of code", "Review pul
             }
         } catch (err) {
             console.error("AI Habit generation error:", err);
-            GrowthUtils.showToast('Failed to parse AI habits. Ensure LLM returns raw JSON array.', 'rose');
+            const errMsg = err.message || "Ensure LLM returns raw JSON array.";
+            GrowthUtils.showToast(`AI Error: ${errMsg}`, 'rose');
         }
     }
 };

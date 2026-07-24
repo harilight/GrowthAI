@@ -118,41 +118,97 @@ const DashboardComponent = {
         }
 
         listEl.innerHTML = '';
-        todayTasks.forEach(task => {
-            const isCompleted = task.completedDates && task.completedDates.includes(todayStr);
+        
+        const renderTaskTree = (tasks, parentId = null, depth = 0, containerEl = listEl) => {
+            const children = tasks.filter(t => (t.parentTaskId || null) === parentId);
+            children.forEach(task => {
+                const isCompleted = task.completedDates && task.completedDates.includes(todayStr);
+                const hasChildren = tasks.some(t => t.parentTaskId === task.id);
 
-            const taskItem = document.createElement('div');
-            taskItem.className = `task-item ${isCompleted ? 'completed' : ''}`;
+                const taskItem = document.createElement('div');
+                taskItem.className = `task-item ${isCompleted ? 'completed' : ''}`;
+                if (depth > 0) {
+                    taskItem.style.marginLeft = `${depth * 1.5}rem`;
+                    taskItem.style.borderLeft = '2px solid var(--border-color)';
+                    taskItem.style.borderBottomLeftRadius = '0';
+                    taskItem.style.borderTopLeftRadius = '0';
+                }
 
-            let badgeClass = 'badge-priority-low';
-            if (task.priority === 'High') badgeClass = 'badge-priority-high';
-            if (task.priority === 'Medium') badgeClass = 'badge-priority-medium';
+                let badgeClass = 'badge-priority-low';
+                if (task.priority === 'High') badgeClass = 'badge-priority-high';
+                if (task.priority === 'Medium') badgeClass = 'badge-priority-medium';
 
-            taskItem.innerHTML = `
-                <div class="task-left">
-                    <div class="custom-checkbox ${isCompleted ? 'checked' : ''}" data-task-id="${task.id}">
-                        ${isCompleted ? '✓' : ''}
-                    </div>
-                    <div class="task-info">
-                        <span class="task-title">${task.title}</span>
-                        <div class="task-meta">
-                            <span class="task-badge ${badgeClass}">${task.priority || 'Normal'} Priority</span>
-                            <span>• Frequency: ${task.frequency || 'Daily'}</span>
+                taskItem.innerHTML = `
+                    <div class="task-left">
+                        <div class="custom-checkbox ${isCompleted ? 'checked' : ''}" data-task-id="${task.id}" style="${hasChildren ? 'opacity: 0.5; pointer-events: none;' : ''}" title="${hasChildren ? 'Auto-completes when sub-tasks are done' : 'Complete task'}">
+                            ${isCompleted ? '✓' : ''}
+                        </div>
+                        <div class="task-info">
+                            <span class="task-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                                ${task.title}
+                                ${hasChildren ? `<button class="icon-btn btn-toggle-subtasks" data-task-id="${task.id}" title="Toggle Sub-Tasks" style="font-size: 0.75rem; padding: 0.1rem 0.3rem;">🔽</button>` : ''}
+                            </span>
+                            <div class="task-meta">
+                                <span class="task-badge ${badgeClass}">${task.priority || 'Normal'} Priority</span>
+                                <span>• Frequency: ${task.frequency || 'Daily'}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="task-right">
-                    <span class="xp-pill">+${task.xpReward || 30} XP</span>
-                </div>
-            `;
+                    <div class="task-right">
+                        <span class="xp-pill">+${task.xpReward || 30} XP</span>
+                        <button class="icon-btn btn-add-subtask" data-task-id="${task.id}" title="Add Sub-Task" style="font-size: 0.85rem; padding: 0.2rem 0.5rem; background: var(--glass-bg); border-radius: var(--radius-sm);">➕ Sub-Task</button>
+                    </div>
+                `;
 
-            const checkbox = taskItem.querySelector('.custom-checkbox');
-            checkbox.addEventListener('click', async () => {
-                await this.handleCheckIn(task.id, todayStr);
+                const checkbox = taskItem.querySelector('.custom-checkbox');
+                if (!hasChildren) {
+                    checkbox.addEventListener('click', async () => {
+                        await this.handleCheckIn(task.id, todayStr);
+                    });
+                }
+
+                const btnToggle = taskItem.querySelector('.btn-toggle-subtasks');
+                if (btnToggle) {
+                    btnToggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const subContainer = document.getElementById(`subtasks-dash-${task.id}`);
+                        if (subContainer) {
+                            if (subContainer.style.display === 'none') {
+                                subContainer.style.display = 'block';
+                                btnToggle.textContent = '🔼';
+                            } else {
+                                subContainer.style.display = 'none';
+                                btnToggle.textContent = '🔽';
+                            }
+                        }
+                    });
+                }
+
+                const btnAddSubtask = taskItem.querySelector('.btn-add-subtask');
+                if (btnAddSubtask) {
+                    btnAddSubtask.addEventListener('click', () => {
+                        if (typeof TasksComponent !== 'undefined' && TasksComponent.openTaskModal) {
+                            TasksComponent.openTaskModal(null, task.id);
+                        }
+                    });
+                }
+
+                containerEl.appendChild(taskItem);
+                
+                if (hasChildren) {
+                    const subContainer = document.createElement('div');
+                    subContainer.className = 'subtasks-container';
+                    subContainer.id = `subtasks-dash-${task.id}`;
+                    subContainer.style.display = 'none'; // Start collapsed
+                    containerEl.appendChild(subContainer);
+                    
+                    // Render children recursively into this container
+                    renderTaskTree(tasks, task.id, depth + 1, subContainer);
+                }
             });
+        };
 
-            listEl.appendChild(taskItem);
-        });
+        renderTaskTree(todayTasks);
     },
 
     async handleCheckIn(taskId, todayStr) {
@@ -171,17 +227,8 @@ const DashboardComponent = {
                 checkInHistory.push(todayStr);
             }
             
-            // Auto-increment manual goals
-            if (task.goalId) {
-                const goal = await db.getGoalById(task.goalId);
-                if (goal && goal.isManualProgress) {
-                    goal.currentValue = Number(goal.currentValue || 0) + 1;
-                    if (goal.currentValue > Number(goal.targetValue || 100)) {
-                        goal.currentValue = Number(goal.targetValue || 100);
-                    }
-                    await db.saveGoal(goal);
-                }
-            }
+            // Apply hierarchical task effects
+            await GoalTree.applyTaskEffects(task, true);
             
             GrowthUtils.showToast(`🎉 Task completed! +${reward} XP earned!`, 'emerald');
             GrowthUtils.triggerConfetti();
@@ -189,14 +236,8 @@ const DashboardComponent = {
             const reward = Number(task.xpReward || 30);
             currentXP = Math.max(0, currentXP - reward);
             
-            // Undo manual goal increment
-            if (task.goalId) {
-                const goal = await db.getGoalById(task.goalId);
-                if (goal && goal.isManualProgress) {
-                    goal.currentValue = Math.max(0, Number(goal.currentValue || 0) - 1);
-                    await db.saveGoal(goal);
-                }
-            }
+            // Revert hierarchical task effects
+            await GoalTree.applyTaskEffects(task, false);
             
             // Exploit Fix: If no tasks are completed today, remove today from history
             const allTasks = await db.getAllTasks();
@@ -205,13 +246,29 @@ const DashboardComponent = {
                 checkInHistory = checkInHistory.filter(d => d !== todayStr);
             }
 
-            GrowthUtils.showToast(`Task marked uncompleted.`, 'cyan');
+            GrowthUtils.showToast(`Task marked uncompleted. -${reward} XP`, 'rose');
         }
 
         await db.updateSetting('xp', currentXP);
         await db.updateSetting('level', Math.floor(Math.sqrt(currentXP / 50)) + 1);
         await db.updateSetting('checkInHistory', checkInHistory);
         await db.updateSetting('lastCheckInDate', todayStr);
+        
+        // Auto-Complete Parent Task Logic
+        if (task.parentTaskId) {
+            const parent = await db.getAllTasks().then(tasks => tasks.find(t => t.id === task.parentTaskId));
+            if (parent) {
+                const siblings = await db.getChildTasks(parent.id);
+                const allCompleted = siblings.every(s => s.completedDates && s.completedDates.includes(todayStr));
+                const parentCompleted = parent.completedDates && parent.completedDates.includes(todayStr);
+                
+                if (allCompleted && !parentCompleted) {
+                    await this.handleCheckIn(parent.id, todayStr);
+                } else if (!allCompleted && parentCompleted) {
+                    await this.handleCheckIn(parent.id, todayStr);
+                }
+            }
+        }
 
         // Re-render dashboard & keep goals/analytics updated
         await this.render();

@@ -17,19 +17,26 @@ const executeQuery = async (query, params = []) => {
 
 // Goals API
 app.get('/api/goals', async (req, res) => {
-    try { res.json(await executeQuery('SELECT * FROM goals')); } catch (e) { res.status(500).json({error: e.message}); }
+    try { 
+        const rows = await executeQuery('SELECT * FROM goals'); 
+        rows.forEach(r => r.categories = r.categories ? JSON.parse(r.categories) : (r.category ? [r.category] : []));
+        res.json(rows); 
+    } catch (e) { res.status(500).json({error: e.message}); }
 });
 app.get('/api/goals/:id', async (req, res) => {
     try {
         const rows = await executeQuery('SELECT * FROM goals WHERE id = ?', [req.params.id]);
+        if (rows.length > 0) {
+            rows[0].categories = rows[0].categories ? JSON.parse(rows[0].categories) : (rows[0].category ? [rows[0].category] : []);
+        }
         res.json(rows[0] || null);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 app.post('/api/goals', async (req, res) => {
-    const { id, title, category, deadline, status, createdAt, updatedAt, icon, description } = req.body;
+    const { id, title, category, categories, deadline, status, createdAt, updatedAt, icon, description } = req.body;
     try {
-        await executeQuery('REPLACE INTO goals (id, title, category, deadline, status, createdAt, updatedAt, icon, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, title, category, deadline, status, createdAt, updatedAt, icon, description]);
+        await executeQuery('REPLACE INTO goals (id, title, category, categories, deadline, status, createdAt, updatedAt, icon, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, title, category, JSON.stringify(categories || []), deadline, status, createdAt, updatedAt, icon, description]);
         res.json(req.body);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
@@ -44,15 +51,18 @@ app.delete('/api/goals/:id', async (req, res) => {
 app.get('/api/tasks', async (req, res) => {
     try {
         const rows = await executeQuery('SELECT * FROM tasks');
-        rows.forEach(r => r.completedDates = r.completedDates ? JSON.parse(r.completedDates) : []);
+        rows.forEach(r => {
+            r.completedDates = r.completedDates ? JSON.parse(r.completedDates) : [];
+            r.goalIds = r.goalIds ? JSON.parse(r.goalIds) : (r.goalId ? [r.goalId] : []);
+        });
         res.json(rows);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 app.post('/api/tasks', async (req, res) => {
-    const { id, title, goalId, priority, dueDate, recurrence, duration, completedDates, createdAt, updatedAt } = req.body;
+    const { id, title, goalId, goalIds, priority, dueDate, dueTime, recurrence, duration, completedDates, createdAt, updatedAt } = req.body;
     try {
-        await executeQuery('REPLACE INTO tasks (id, title, goalId, priority, dueDate, recurrence, duration, completedDates, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, title, goalId, priority, dueDate, recurrence, duration, JSON.stringify(completedDates || []), createdAt, updatedAt]);
+        await executeQuery('REPLACE INTO tasks (id, title, goalId, goalIds, priority, dueDate, dueTime, recurrence, duration, completedDates, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, title, goalId, JSON.stringify(goalIds || []), priority, dueDate, dueTime, recurrence, duration, JSON.stringify(completedDates || []), createdAt, updatedAt]);
         res.json(req.body);
     } catch (e) { res.status(500).json({error: e.message}); }
 });

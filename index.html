@@ -551,6 +551,23 @@
     </div>
 
     <!-- MODALS -->
+    <!-- Goal Explorer Modal -->
+    <div class="modal-overlay" id="goal-explorer-modal" style="display: none; z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="max-width: 600px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
+            <!-- Header / Breadcrumbs -->
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                <button class="btn btn-secondary btn-sm" id="goal-explorer-back" style="display: none;">← Back</button>
+                <div id="goal-explorer-breadcrumbs" style="flex: 1; margin: 0 1rem; font-size: 0.9rem; color: var(--text-muted); text-align: center;"></div>
+                <button class="icon-btn" onclick="GoalExplorer.close()" style="font-size: 1.5rem;">&times;</button>
+            </div>
+            
+            <!-- Sliding Container -->
+            <div id="goal-explorer-slider" style="position: relative; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 300px;">
+                <!-- Content will be injected here by JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- 1. Target Goal Modal -->
     <div class="modal-overlay" id="goal-modal">
         <div class="modal-content">
@@ -568,23 +585,21 @@
                     <label for="goal-desc-input">Description & Why *</label>
                     <textarea id="goal-desc-input" rows="2" placeholder="Describe the outcome and personal growth significance..."></textarea>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="goal-category-input">Category *</label>
-                        <select id="goal-category-input" required>
-                            <option value="Career">💼 Career</option>
-                            <option value="Health">💪 Health</option>
-                            <option value="Financial">💰 Financial</option>
-                            <option value="Personal">🧘 Personal</option>
-                            <option value="Skills">📚 Skills</option>
-                        </select>
+                <div class="form-group">
+                    <label>Categories * (Multi-Select)</label>
+                    <div id="goal-category-input" class="multi-select-grid">
+                        <label class="multi-chip"><input type="checkbox" value="Career"> 💼 Career</label>
+                        <label class="multi-chip"><input type="checkbox" value="Health"> 💪 Health</label>
+                        <label class="multi-chip"><input type="checkbox" value="Financial"> 💰 Financial</label>
+                        <label class="multi-chip"><input type="checkbox" value="Personal"> 🧘 Personal</label>
+                        <label class="multi-chip"><input type="checkbox" value="Skills"> 📚 Skills</label>
                     </div>
-                    <div class="form-group">
-                        <label for="goal-target-val">Target Value & Unit *</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="number" id="goal-target-val" placeholder="100" style="width: 60%;" required>
-                            <input type="text" id="goal-unit-input" placeholder="Hours/$ /%" style="width: 40%;" required>
-                        </div>
+                </div>
+                <div class="form-group">
+                    <label for="goal-target-val">Target Value & Unit *</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="number" id="goal-target-val" placeholder="100" style="width: 60%;" required>
+                        <input type="text" id="goal-unit-input" placeholder="Hours/$ /%" style="width: 40%;" required>
                     </div>
                 </div>
                 
@@ -632,16 +647,17 @@
             </div>
             <form id="task-form">
                 <input type="hidden" id="task-id">
+                <input type="hidden" id="task-parent-id">
                 <div class="form-group">
                     <label for="task-title-input">Task / Action Title *</label>
                     <input type="text" id="task-title-input" placeholder="e.g. Complete 2 LeetCode problems or 30 min cardio" required>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="task-goal-link">Link to Target Goal</label>
-                        <select id="task-goal-link">
-                            <option value="">-- No Linked Goal (Standalone) --</option>
-                        </select>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Target Goal Effects (Link task and set progress amount)</label>
+                        <div id="task-effects-container" style="background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; max-height: 200px; overflow-y: auto;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="task-priority-input">Priority Level</label>
@@ -656,15 +672,18 @@
                     <div class="form-group">
                         <label for="task-freq-input">Frequency / Recurrence *</label>
                         <select id="task-freq-input">
-                            <option value="Daily">Everday (Daily Habit)</option>
-                            <option value="Weekdays">Mon - Fri (Weekdays)</option>
-                            <option value="Weekends">Sat - Sun (Weekends)</option>
-                            <option value="Custom">Custom Days</option>
+                            <option value="Daily">Everyday (Daily Habit)</option>
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                            <option value="OneTime">One-Time Task (Scheduled)</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="task-due-date">Target Time / Due Date</label>
-                        <input type="date" id="task-due-date">
+                    <div class="form-group half-width">
+                        <label>Target Time / Due Date</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="date" id="task-date-input" style="flex: 1;">
+                            <input type="time" id="task-time-input" style="flex: 1;">
+                        </div>
                     </div>
                 </div>
 
@@ -788,6 +807,19 @@
         </div>
     </div>
 
+    <!-- Custom UI Alert/Confirm Modal -->
+    <div class="modal-overlay" id="custom-alert-modal" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; padding: 2rem;">
+            <div id="custom-alert-icon" style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+            <h2 id="custom-alert-title" style="margin-bottom: 1rem; color: var(--text-primary);">Alert</h2>
+            <p id="custom-alert-message" style="margin-bottom: 2rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;"></p>
+            <div class="form-row" id="custom-alert-buttons" style="justify-content: center; gap: 1rem;">
+                <button class="btn btn-secondary" id="custom-alert-cancel">Cancel</button>
+                <button class="btn btn-primary" id="custom-alert-confirm">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications Container -->
     <div class="toast-container" id="toast-container"></div>
     <canvas id="confetti-canvas"></canvas>
@@ -836,6 +868,7 @@
 
     <!-- Application Javascript Modules -->
     <script src="js/db.js"></script>
+    <script src="js/goal_tree.js"></script>
     <script src="js/models.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/components/dashboard.js"></script>

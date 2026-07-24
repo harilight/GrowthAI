@@ -1178,3 +1178,142 @@ select option {
         padding: 1.5rem;
     }
 }
+
+.multi-select-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.custom-dropdown-container {
+    position: relative;
+    width: 100%;
+}
+.custom-dropdown-container .dropdown-header {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light, #1e293b);
+    border-radius: 8px;
+    padding: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+.custom-dropdown-container .dropdown-header:hover {
+    border-color: #8b5cf6;
+}
+.custom-dropdown-container .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-tertiary, #141d33);
+    border: 1px solid var(--border-light, #1e293b);
+    border-radius: 8px;
+    margin-top: 0.4rem;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    padding: 0.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.custom-dropdown-container.open .dropdown-list {
+    display: flex;
+}
+.custom-dropdown-container.open .dropdown-header {
+    border-color: #8b5cf6;
+}
+.multi-chip {
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    user-select: none;
+}
+.multi-chip:hover {
+    border-color: #8b5cf6;
+}
+.multi-chip input[type='checkbox'] {
+    display: none;
+}
+.multi-chip.selected {
+    background: #8b5cf6;
+    color: white;
+    border-color: #8b5cf6;
+}
+
+/* Goal Explorer Styles */
+.explorer-node {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.explorer-node:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-cyan);
+    transform: translateY(-2px);
+}
+
+.explorer-node-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    gap: 0.5rem;
+}
+
+.explorer-node-meta {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.explorer-node-arrow {
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    transition: transform 0.2s;
+}
+
+.explorer-node:hover .explorer-node-arrow {
+    color: var(--accent-cyan);
+    transform: translateX(4px);
+}
+
+.slide-container {
+    width: 100%;
+    animation-duration: 0.25s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-in-right { animation-name: slideInRight; }
+.slide-in-left { animation-name: slideInLeft; }

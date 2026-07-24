@@ -19,8 +19,11 @@ const GrowthModels = {
         
         const timeProgressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / totalDurationDays) * 100)));
 
-        // Linked tasks
-        const linkedTasks = allTasks.filter(t => t.goalId === goal.id);
+        // Linked tasks (Many-to-Many mapping)
+        const linkedTasks = allTasks.filter(t => {
+            const gIds = t.goalIds || (t.goalId ? [t.goalId] : []);
+            return gIds.includes(goal.id);
+        });
         
         // Progress percentage calculation
         let actualProgressPercent = 0;
@@ -35,8 +38,8 @@ const GrowthModels = {
             linkedTasks.forEach(t => {
                 totalCompletedCheckins += (t.completedDates ? t.completedDates.length : 0);
             });
-            // If tasks are daily/recurring, compare completed check-ins to expected check-ins
-            const expectedCheckins = Math.max(1, linkedTasks.length * Math.min(daysElapsed, totalDurationDays));
+            // If tasks are daily/recurring, compare completed check-ins to expected check-ins over the full duration
+            const expectedCheckins = Math.max(1, linkedTasks.length * totalDurationDays);
             actualProgressPercent = Math.round((totalCompletedCheckins / expectedCheckins) * 100);
             currentValue = Math.round((actualProgressPercent / 100) * targetValue);
         } else {
@@ -93,6 +96,86 @@ const GrowthModels = {
             requiredDailyVelocity,
             linkedTasksCount: linkedTasks.length
         };
+    },
+
+    /**
+     * Recursively calculate rollup progress based on child goals
+     */
+    calculateRollupProgress(goal, allGoals = [], allTasks = []) {
+        const children = allGoals.filter(g => g.parentGoalId === goal.id);
+        
+        let selfMetrics = this.calculateGoalMetrics(goal, allTasks);
+
+        if (children.length === 0) {
+            // Leaf goal: just use its own metrics
+            return selfMetrics;
+        }
+
+        // Branch goal: calculate weighted average of children
+        let totalWeight = 0;
+        let weightedProgressSum = 0;
+        let isAllChildrenCompleted = true;
+
+        children.forEach(child => {
+            const childRollup = this.calculateRollupProgress(child, allGoals, allTasks);
+            const weight = Number(child.childWeight) || 1;
+            totalWeight += weight;
+            weightedProgressSum += (childRollup.actualProgressPercent * weight);
+            
+            if (childRollup.actualProgressPercent < 100) {
+                isAllChildrenCompleted = false;
+            }
+        });
+
+        // If children exist but total weight is 0, fallback to self
+        if (totalWeight === 0) return selfMetrics;
+
+        // Override the actualProgressPercent with the rollup
+        let rollupPercent = Math.round(weightedProgressSum / totalWeight);
+        
+        // Strict hierarchy constraint: A parent cannot be 100% complete unless ALL subgoals are 100% complete
+        if (!isAllChildrenCompleted && rollupPercent >= 100) {
+            rollupPercent = 99; 
+        }
+
+        selfMetrics.actualProgressPercent = rollupPercent;
+        
+        // Adjust currentValue based on the rollup percentage of the targetValue
+        selfMetrics.currentValue = Math.round((rollupPercent / 100) * selfMetrics.targetValue);
+        
+        // Re-evaluate status based on new rollupPercent
+        let isOverachieved = rollupPercent > 100;
+        let status = 'In Progress';
+        let statusClass = 'status-ontrack';
+        let statusText = '🟢 On Track';
+
+        if (isOverachieved) {
+            status = 'Overachieved';
+            statusClass = 'status-completed';
+            statusText = '🏆 Overachieved!';
+        } else if (rollupPercent >= 100) {
+            status = 'Completed';
+            statusClass = 'status-completed';
+            statusText = '🎉 Completed';
+        } else if (selfMetrics.daysRemaining <= 0 && rollupPercent < 100) {
+            status = 'Overdue';
+            statusClass = 'status-behind';
+            statusText = '🔴 Overdue / Missed';
+        } else if (selfMetrics.timeProgressPercent - rollupPercent > 15) {
+            status = 'Behind';
+            statusClass = 'status-behind';
+            statusText = '⚠️ Needs Attention';
+        } else if (rollupPercent - selfMetrics.timeProgressPercent > 10) {
+            status = 'Ahead';
+            statusClass = 'status-ontrack';
+            statusText = '🚀 Ahead of Schedule';
+        }
+
+        selfMetrics.status = status;
+        selfMetrics.statusClass = statusClass;
+        selfMetrics.statusText = statusText;
+
+        return selfMetrics;
     },
 
     /**
@@ -210,19 +293,27 @@ const GrowthModels = {
         const xpDistribution = { Career: 0, Health: 0, Financial: 0, Personal: 0, Skills: 0 };
 
         goals.forEach(g => {
-            if (counts[g.category] !== undefined) {
-                counts[g.category]++;
-            }
+            const cats = g.categories || (g.category ? [g.category] : []);
+            cats.forEach(c => {
+                if (counts[c] !== undefined) counts[c]++;
+            });
         });
 
         tasks.forEach(t => {
-            if (t.goalId) {
-                const goal = goals.find(g => g.id === t.goalId);
-                if (goal && xpDistribution[goal.category] !== undefined) {
-                    const completedCount = t.completedDates ? t.completedDates.length : 0;
-                    xpDistribution[goal.category] += (t.xpReward || 30) * completedCount;
+            const gIds = t.goalIds || (t.goalId ? [t.goalId] : []);
+            gIds.forEach(gid => {
+                const goal = goals.find(g => g.id === gid);
+                if (goal) {
+                    const cats = goal.categories || (goal.category ? [goal.category] : []);
+                    const weightFraction = 1 / (gIds.length * cats.length);
+                    cats.forEach(c => {
+                        if (xpDistribution[c] !== undefined) {
+                            const completedCount = t.completedDates ? t.completedDates.length : 0;
+                            xpDistribution[c] += ((t.xpReward || 30) * completedCount) * weightFraction;
+                        }
+                    });
                 }
-            }
+            });
         });
 
         return {

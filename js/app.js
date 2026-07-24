@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('No existing goals found. Initializing with default gamification settings.');
         }
 
+        // Run data migration to v3
+        await migrateToHierarchicalModel();
+
         // 2. Initialize Navigation Tabs
         const navItems = document.querySelectorAll('.nav-item');
         const tabViews = document.querySelectorAll('.tab-view');
@@ -161,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         GrowthUtils.showToast('🎉 Database successfully restored from backup!', 'emerald');
                         await DashboardComponent.render();
                     } catch (err) {
-                        alert('Could not restore backup file: ' + err.message);
+                        await GrowthUtils.alert('Could not restore backup file: ' + err.message, 'Import Error', '❌');
                     }
                 };
                 reader.readAsText(file);
@@ -181,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btnResetDb = document.getElementById('btn-reset-db');
         if (btnResetDb) {
             btnResetDb.addEventListener('click', async () => {
-                if (confirm('🚨 Are you sure you want to permanently clear all goals, tasks, and reflections? This cannot be undone!')) {
+                if (await GrowthUtils.confirm('🚨 Are you sure you want to permanently clear all goals, tasks, and reflections? This cannot be undone!', 'Wipe Database', '🚨')) {
                     await db.resetDatabase();
                     GrowthUtils.showToast('Database reset to defaults.', 'rose');
                     await DashboardComponent.render();
@@ -190,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const seedDemoHandler = async () => {
-            if (confirm('🌱 Load sample Target Goals, Daily Tasks, and 25 days of consistency logs right now? (Existing data will be replaced by demo items)')) {
+            if (await GrowthUtils.confirm('🌱 Load sample Target Goals, Daily Tasks, and 25 days of consistency logs right now? (Existing data will be replaced by demo items)', 'Seed Demo Data', '🌱')) {
                 await GrowthUtils.seedDemoData(db);
                 GrowthUtils.showToast('🌱 Rich demo data loaded! Check out your stats & charts!', 'emerald');
                 GrowthUtils.triggerConfetti();
@@ -208,7 +211,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         await DashboardComponent.render();
         GrowthUtils.showToast('✨ GrowthOS Loaded — Ready to accelerate your progress.', 'cyan');
 
+        // 8. Multi-Select Chip Toggles
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('.multi-chip input[type="checkbox"]')) {
+                if (e.target.checked) {
+                    e.target.parentElement.classList.add('selected');
+                } else {
+                    e.target.parentElement.classList.remove('selected');
+                }
+            }
+        });
+
+        // 9. Notifications Service (Scheduled Tasks)
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+        // Poll every minute for scheduled tasks
+        setInterval(async () => {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const now = new Date();
+                const timeStr = now.toTimeString().substring(0, 5); // HH:MM
+                const dateStr = now.toISOString().split('T')[0];
+                const tasks = await db.getAllTasks();
+                tasks.forEach(t => {
+                    if (t.dueDate === dateStr && t.dueTime === timeStr && (!t.completedDates || !t.completedDates.includes(dateStr))) {
+                        new Notification('GrowthOS ⏰', { body: `Time to focus: ${t.title}`, icon: 'favicon.ico' });
+                    }
+                });
+            }
+        }, 60000);
+
     } catch (err) {
         console.error('Fatal error setting up GrowthOS:', err);
     }
 });
+
+async function migrateToHierarchicalModel() {
+    const settings = await db.getSettings();
+    if (settings.migratedToV3) return;
+
+    const tasks = await db.getAllTasks();
+    for (const task of tasks) {
+        if (task.goalIds && task.goalIds.length > 0 && (!task.effects || task.effects.length === 0)) {
+            task.effects = task.goalIds.map(gid => ({
+                targetType: 'goal',
+                targetId: gid,
+                amount: task.xpReward || 30
+            }));
+            await db.saveTask(task);
+        } else if (task.goalId && (!task.effects || task.effects.length === 0)) {
+            task.effects = [{ targetType: 'goal', targetId: task.goalId, amount: task.xpReward || 30 }];
+            await db.saveTask(task);
+        }
+    }
+
+    const goals = await db.getAllGoals();
+    for (const goal of goals) {
+        if (goal.parentGoalId === undefined) {
+            goal.parentGoalId = null;
+            goal.childWeight = 1;
+            await db.saveGoal(goal);
+        }
+    }
+
+    await db.updateSetting('migratedToV3', true);
+    console.log(`Migrated ${tasks.length} tasks and ${goals.length} goals to the hierarchical model.`);
+}

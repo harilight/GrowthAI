@@ -97,6 +97,16 @@ async function createTables() {
     for (let query of queries) {
         await pool.query(query);
     }
+    
+    // Migrations for new features (ignore if already exists)
+    try { await pool.query('ALTER TABLE goals ADD COLUMN categories JSON'); } catch(e) {}
+    try { await pool.query('UPDATE goals SET categories = JSON_ARRAY(category) WHERE category IS NOT NULL AND categories IS NULL'); } catch(e) {}
+    
+    try { await pool.query('ALTER TABLE tasks ADD COLUMN goalIds JSON'); } catch(e) {}
+    try { await pool.query('UPDATE tasks SET goalIds = JSON_ARRAY(goalId) WHERE goalId IS NOT NULL AND goalId != "" AND goalIds IS NULL'); } catch(e) {}
+    
+    try { await pool.query('ALTER TABLE tasks ADD COLUMN dueTime VARCHAR(100)'); } catch(e) {}
+
     console.log("MySQL Tables initialized successfully.");
 }
 
