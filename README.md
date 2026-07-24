@@ -16,11 +16,13 @@
 
 ### 📸 Showcase
 <div align="center">
-  <img src="assets/dashboard.jpg" alt="GrowthOS Dashboard" width="48%">
-  <img src="assets/goals.jpg" alt="Hierarchical Goals" width="48%">
+  <img src="assets/dashboard.png" alt="GrowthOS Dashboard" width="48%">
+  <img src="assets/goals.png" alt="Hierarchical Goals" width="48%">
   <br>
-  <img src="assets/analytics.jpg" alt="Deep Analytics" width="48%">
-  <img src="assets/focus.jpg" alt="Focus Room" width="48%">
+  <img src="assets/analytics.png" alt="Deep Analytics" width="48%">
+  <img src="assets/focus.png" alt="Focus Room" width="48%">
+  <br>
+  <img src="assets/ai_coach.png" alt="AI Growth Coach" width="96%">
 </div>
 
 ---
