@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="https://img.icons8.com/nolan/128/1A6DFF/C822FF/bullseye.png" alt="GrowthOS Logo" width="100"/>
-  <h1>GrowthOS 🚀</h1>
+  <h1 style="font-size: 3rem; margin-bottom: 0;">🎯 GrowthOS 🚀</h1>
   <p><strong>The Ultimate Gamified Productivity & Personal Growth Engine</strong></p>
 
   <p>
