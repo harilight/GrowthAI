@@ -2,6 +2,11 @@
   <h1 style="font-size: 3rem; margin-bottom: 0;">🎯 GrowthOS 🚀</h1>
   <p><strong>The Ultimate Gamified Productivity & Personal Growth Engine</strong></p>
 
+  <a href="https://harilight.github.io/GrowthAI">
+    <img src="https://img.shields.io/badge/🔴_Live_Demo-harilight.github.io%2FGrowthAI-blue?style=for-the-badge" alt="Live Demo">
+  </a>
+  <br><br>
+
   <p>
     <a href="#-core-features">Features</a> •
     <a href="#-ai-growth-coach">AI Coach</a> •
